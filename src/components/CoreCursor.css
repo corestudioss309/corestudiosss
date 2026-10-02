@@ -1,0 +1,83 @@
+.core-cursor,
+.core-cursor-dot {
+  display: none;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  html.core-cursor-enabled,
+  html.core-cursor-enabled body,
+  html.core-cursor-enabled a,
+  html.core-cursor-enabled button,
+  html.core-cursor-enabled [role="button"],
+  html.core-cursor-enabled input,
+  html.core-cursor-enabled select,
+  html.core-cursor-enabled textarea,
+  html.core-cursor-enabled label {
+    cursor: none;
+  }
+
+  .core-cursor,
+  .core-cursor-dot {
+    display: block;
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 9999;
+    pointer-events: none;
+    opacity: 0;
+    will-change: transform;
+  }
+
+  .core-cursor {
+    width: 26px;
+    height: 26px;
+    border: 1px solid hsl(var(--foreground) / 0.75);
+    transform: translate3d(-40px, -40px, 0) rotate(0deg);
+    transition: width 180ms ease, height 180ms ease, border-color 180ms ease,
+      background-color 180ms ease, opacity 120ms ease, transform 70ms linear;
+  }
+
+  .core-cursor::after {
+    content: '';
+    position: absolute;
+    inset: 6px;
+    border: 1px solid hsl(var(--foreground) / 0.45);
+    transition: inset 180ms ease, background-color 180ms ease;
+  }
+
+  .core-cursor-dot {
+    width: 4px;
+    height: 4px;
+    background: hsl(var(--foreground));
+    transform: translate3d(-40px, -40px, 0);
+    transition: opacity 120ms ease, transform 35ms linear;
+  }
+
+  .core-cursor-visible {
+    opacity: 1;
+  }
+
+  .core-cursor-active {
+    width: 40px;
+    height: 40px;
+    border-color: hsl(var(--foreground));
+    background: hsl(var(--foreground) / 0.08);
+  }
+
+  .core-cursor-active::after {
+    inset: 11px;
+    background: hsl(var(--foreground) / 0.12);
+  }
+
+  .core-cursor-pressed {
+    width: 20px;
+    height: 20px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .core-cursor,
+  .core-cursor-dot {
+    transition: none;
+  }
+}

@@ -1,0 +1,209 @@
+@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@200..1000&family=JetBrains+Mono:wght@400;500&family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Core Studios monochrome design tokens. All colors are achromatic HSL values. */
+
+html, body {
+  overflow-x: hidden;
+}
+
+@layer base {
+  :root {
+    /* Dark mode only - these are the default values */
+    --background: 0 0% 0%;
+    --foreground: 0 0% 98%;
+
+    --card: 0 0% 8%;
+    --card-foreground: 0 0% 98%;
+
+    --popover: 0 0% 8%;
+    --popover-foreground: 0 0% 98%;
+
+    --primary: 0 0% 96%;
+    --primary-foreground: 0 0% 5%;
+
+    --secondary: 0 0% 19%;
+    --secondary-foreground: 0 0% 98%;
+
+    --muted: 0 0% 15%;
+    --muted-foreground: 0 0% 70%;
+
+    --accent: 0 0% 24%;
+    --accent-foreground: 0 0% 98%;
+
+    --destructive: 0 0% 34%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 0 0% 29%;
+    --input: 0 0% 24%;
+    --ring: 0 0% 86%;
+
+    --radius: 0rem;
+
+    /* Retain existing accent utility names while rendering them monochrome. */
+    --gradient-purple: 0 0% 96%;
+    --gradient-blue: 0 0% 64%;
+
+    --mono-50: 0 0% 98%;
+    --mono-100: 0 0% 95%;
+    --mono-200: 0 0% 88%;
+    --mono-300: 0 0% 77%;
+    --mono-400: 0 0% 67%;
+    --mono-500: 0 0% 52%;
+    --mono-600: 0 0% 43%;
+    --mono-700: 0 0% 35%;
+    --mono-800: 0 0% 26%;
+    --mono-900: 0 0% 17%;
+    --mono-950: 0 0% 10%;
+
+    /* Glass morphism */
+    --glass-bg: 0 0% 10%;
+    --glass-border: 0 0% 29%;
+
+    /* Sidebar */
+    --sidebar-background: 0 0% 6%;
+    --sidebar-foreground: 0 0% 98%;
+    --sidebar-primary: 0 0% 96%;
+    --sidebar-primary-foreground: 0 0% 5%;
+    --sidebar-accent: 0 0% 18%;
+    --sidebar-accent-foreground: 0 0% 98%;
+    --sidebar-border: 0 0% 29%;
+    --sidebar-ring: 0 0% 86%;
+  }
+
+  /* Force dark mode always */
+  .dark,
+  :root {
+    color-scheme: dark;
+  }
+}
+
+@layer base {
+  *,
+  *::before,
+  *::after {
+    @apply border-border;
+    border-radius: 0 !important;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    font-family: 'Inter', sans-serif;
+  }
+
+  img, video {
+    filter: grayscale(1);
+  }
+
+  /* Professional typography: tight, balanced headings and readable body copy */
+  h1, h2, h3 {
+    letter-spacing: -0.025em;
+    text-wrap: balance;
+    line-height: 1.1;
+  }
+  [dir="rtl"] h1, [dir="rtl"] h2, [dir="rtl"] h3 {
+    letter-spacing: 0;
+    line-height: 1.35;
+  }
+  p {
+    text-wrap: pretty;
+  }
+  main > section, main > div > section {
+    scroll-margin-top: 4rem;
+  }
+
+  /* RTL Support for Arabic */
+  [dir="rtl"] body {
+    font-family: 'Cairo', sans-serif;
+  }
+
+  [dir="rtl"] {
+    text-align: right;
+  }
+}
+
+@layer utilities {
+  /* Solid text utility (legacy name) */
+  .gradient-text {
+    color: hsl(var(--foreground));
+  }
+
+  /* Solid background utility (legacy name) */
+  .gradient-bg {
+    background: hsl(var(--primary));
+    color: hsl(var(--primary-foreground));
+  }
+
+  /* Flat border utility (legacy name) */
+  .gradient-border {
+    position: relative;
+    background: hsl(var(--card));
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+  }
+
+  .gradient-border:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 30px -8px hsl(var(--gradient-purple) / 0.3);
+  }
+
+  .gradient-border::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1px;
+    background: hsl(var(--border));
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+    opacity: 0.6;
+    transition: opacity 0.3s ease;
+  }
+
+  .gradient-border:hover::before {
+    opacity: 1;
+  }
+
+  /* Glass morphism effect */
+  .glass {
+    background: hsl(var(--glass-bg) / 0.8);
+    backdrop-filter: blur(12px);
+    border: 1px solid hsl(var(--glass-border) / 0.5);
+  }
+
+  /* Glow effects */
+  .glow-purple {
+    box-shadow: 0 0 40px hsl(var(--gradient-purple) / 0.3);
+  }
+
+  .glow-blue {
+    box-shadow: 0 0 40px hsl(var(--gradient-blue) / 0.3);
+  }
+
+  /* Animation utilities */
+  .animate-float {
+    animation: float 6s ease-in-out infinite;
+  }
+
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-20px); }
+  }
+
+  .animate-pulse-glow {
+    animation: pulse-glow 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse-glow {
+    0%, 100% { opacity: 0.5; }
+    50% { opacity: 1; }
+  }
+}

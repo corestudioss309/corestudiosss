@@ -1,0 +1,2 @@
+DROP POLICY IF EXISTS "Anyone can view snaps images" ON storage.objects;
+CREATE POLICY "Admins can list snaps images" ON storage.objects FOR SELECT TO authenticated USING (bucket_id = 'snaps' AND public.has_role(auth.uid(), 'admin'::public.app_role));
