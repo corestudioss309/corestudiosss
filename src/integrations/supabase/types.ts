@@ -80,6 +80,36 @@ export type Database = {
         }
         Relationships: []
       }
+      expenses: {
+        Row: {
+          amount: number
+          category: string
+          created_at: string
+          expense_date: string
+          id: string
+          notes: string | null
+          title: string
+        }
+        Insert: {
+          amount?: number
+          category?: string
+          created_at?: string
+          expense_date?: string
+          id?: string
+          notes?: string | null
+          title: string
+        }
+        Update: {
+          amount?: number
+          category?: string
+          created_at?: string
+          expense_date?: string
+          id?: string
+          notes?: string | null
+          title?: string
+        }
+        Relationships: []
+      }
       interested_leads: {
         Row: {
           business_type: string

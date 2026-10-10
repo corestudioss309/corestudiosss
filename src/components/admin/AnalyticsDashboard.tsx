@@ -3,7 +3,9 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Users, DollarSign, TrendingUp, UserPlus, Clock, CheckCircle } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Users, DollarSign, TrendingUp, UserPlus, Clock, CheckCircle, Wallet } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell } from 'recharts';
 import { format, subDays, startOfMonth, endOfMonth, eachDayOfInterval, parseISO } from 'date-fns';
 import { ar, enUS } from 'date-fns/locale';
@@ -15,6 +17,7 @@ interface AnalyticsData {
   monthlyRevenue: number;
   totalLeads: number;
   convertedLeads: number;
+  totalExpenses: number;
   recentOrders: { date: string; count: number }[];
   statusBreakdown: { name: string; value: number; color: string }[];
 }
@@ -25,39 +28,48 @@ const AnalyticsDashboard = () => {
   const [isLoading, setIsLoading] = useState(true);
   const dateLocale = language === 'ar' ? ar : enUS;
 
+  type Range = '24h' | 'week' | 'month' | 'custom';
+  const [range, setRange] = useState<Range>('month');
+  const [customFrom, setCustomFrom] = useState(format(subDays(new Date(), 30), 'yyyy-MM-dd'));
+  const [customTo, setCustomTo] = useState(format(new Date(), 'yyyy-MM-dd'));
+
+  const getBounds = (): [Date, Date] => {
+    const now = new Date();
+    if (range === '24h') return [new Date(now.getTime() - 86400000), now];
+    if (range === 'week') return [subDays(now, 7), now];
+    if (range === 'month') return [subDays(now, 30), now];
+    return [new Date(customFrom + 'T00:00:00'), new Date(customTo + 'T23:59:59')];
+  };
+
   useEffect(() => {
     fetchAnalytics();
-  }, []);
+  }, [range, customFrom, customTo]);
 
   const fetchAnalytics = async () => {
     setIsLoading(true);
+    const [from, to] = getBounds();
+    const inRange = (d: string) => { const t = new Date(d).getTime(); return t >= from.getTime() && t <= to.getTime(); };
 
-    // Fetch orders
-    const { data: orders } = await supabase
-      .from('orders')
-      .select('*');
+    const { data: allOrders } = await supabase.from('orders').select('*');
+    const { data: allLeads } = await supabase.from('leads').select('*');
+    const { data: allRenewals } = await supabase.from('renewals').select('*').eq('status', 'confirmed');
+    const { data: allExpenses } = await supabase.from('expenses').select('amount, expense_date');
 
-    // Fetch leads
-    const { data: leads } = await supabase
-      .from('leads')
-      .select('*');
-
-    // Fetch confirmed renewals
-    const { data: renewals } = await supabase
-      .from('renewals')
-      .select('*')
-      .eq('status', 'confirmed');
+    const orders = allOrders?.filter(o => inRange(o.created_at));
+    const leads = allLeads?.filter(l => inRange(l.created_at));
+    const renewals = allRenewals?.filter(r => inRange(r.created_at));
+    const totalExpenses = (allExpenses || [])
+      .filter(e => inRange(e.expense_date + 'T12:00:00'))
+      .reduce((s, e) => s + (e.amount || 0), 0);
 
     if (orders && leads) {
       const confirmedRenewals = renewals || [];
       
-      // Calculate metrics
       const totalSubscribers = orders.length;
       const activeSubscribers = orders.filter(o => 
         o.subscription_status === 'active' || o.subscription_status === 'renewed'
       ).length;
       
-      // Revenue calculation: orders (setup + addons - coupon) + renewals (fee - coupon)
       const orderRevenue = orders.reduce((sum, o) => {
         const setupFee = o.setup_fee || 0;
         const addonTotal = o.addon_total || 0;
@@ -71,11 +83,9 @@ const AnalyticsDashboard = () => {
 
       const totalRevenue = orderRevenue + renewalRevenue;
 
-      // Monthly revenue: for each active/renewed subscriber, use their latest renewal amount if exists, otherwise monthly_fee
       const monthlyRevenue = orders
         .filter(o => o.subscription_status === 'active' || o.subscription_status === 'renewed')
         .reduce((sum, o) => {
-          // Check if there's a confirmed renewal for this order
           const latestRenewal = confirmedRenewals
             .filter(r => r.original_order_id === o.order_id)
             .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
@@ -86,28 +96,35 @@ const AnalyticsDashboard = () => {
           return sum + (o.monthly_fee || 0);
         }, 0);
 
-      // Lead metrics
       const totalLeads = leads.length;
       const convertedLeads = leads.filter(l => l.status === 'contacted').length;
 
-      // Orders by day (last 14 days)
-      const last14Days = eachDayOfInterval({
-        start: subDays(new Date(), 13),
-        end: new Date(),
-      });
+      let recentOrders: { date: string; count: number }[];
+      if (range === '24h') {
+        const endHour = new Date(to);
+        endHour.setMinutes(0, 0, 0);
+        recentOrders = Array.from({ length: 24 }, (_, i) => {
+          const start = new Date(endHour.getTime() - (23 - i) * 3600000);
+          const end = start.getTime() + 3600000;
+          const count = (allOrders || []).filter(o => {
+            const t = new Date(o.created_at).getTime();
+            return t >= start.getTime() && t < end;
+          }).length;
+          return { date: format(start, 'HH:00'), count };
+        });
+      } else {
+        let start = from;
+        if (to.getTime() - from.getTime() > 366 * 86400000) start = subDays(to, 366);
+        const days = start.getTime() <= to.getTime() ? eachDayOfInterval({ start, end: to }) : [];
+        recentOrders = days.map(day => {
+          const dateStr = format(day, 'yyyy-MM-dd');
+          const count = (allOrders || []).filter(o =>
+            format(parseISO(o.created_at), 'yyyy-MM-dd') === dateStr
+          ).length;
+          return { date: format(day, 'MMM dd', { locale: dateLocale }), count };
+        });
+      }
 
-      const recentOrders = last14Days.map(day => {
-        const dateStr = format(day, 'yyyy-MM-dd');
-        const count = orders.filter(o => 
-          format(parseISO(o.created_at), 'yyyy-MM-dd') === dateStr
-        ).length;
-        return {
-          date: format(day, 'MMM dd', { locale: dateLocale }),
-          count,
-        };
-      });
-
-      // Status breakdown
       const statusCounts: Record<string, number> = {};
       orders.forEach(o => {
         statusCounts[o.subscription_status] = (statusCounts[o.subscription_status] || 0) + 1;
@@ -136,6 +153,7 @@ const AnalyticsDashboard = () => {
         monthlyRevenue,
         totalLeads,
         convertedLeads,
+        totalExpenses,
         recentOrders,
         statusBreakdown,
       });
@@ -157,7 +175,7 @@ const AnalyticsDashboard = () => {
     return labels[status] ? (language === 'ar' ? labels[status].ar : labels[status].en) : status;
   };
 
-  if (isLoading) {
+  if (isLoading && !analytics) {
     return (
       <div className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -193,7 +211,26 @@ const AnalyticsDashboard = () => {
         </p>
       </div>
 
-      {/* Key Metrics */}
+      <div className={`flex flex-wrap items-center gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
+        {([
+          ['24h', isRTL ? 'آخر 24 ساعة' : 'Last 24h'],
+          ['week', isRTL ? 'آخر أسبوع' : 'Last week'],
+          ['month', isRTL ? 'آخر شهر' : 'Last month'],
+          ['custom', isRTL ? 'من تاريخ لتاريخ' : 'Custom range'],
+        ] as [Range, string][]).map(([id, label]) => (
+          <Button key={id} size="sm" variant={range === id ? 'default' : 'outline'} onClick={() => setRange(id)}>
+            {label}
+          </Button>
+        ))}
+        {range === 'custom' && (
+          <div className={`flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
+            <Input type="date" value={customFrom} onChange={(e) => setCustomFrom(e.target.value)} className="w-40" />
+            <span className="text-muted-foreground">{isRTL ? 'إلى' : 'to'}</span>
+            <Input type="date" value={customTo} onChange={(e) => setCustomTo(e.target.value)} className="w-40" />
+          </div>
+        )}
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card className="glass border-border">
           <CardContent className="p-6">
@@ -262,28 +299,29 @@ const AnalyticsDashboard = () => {
             <div className={`flex items-center justify-between ${isRTL ? 'flex-row-reverse' : ''}`}>
               <div className={isRTL ? 'text-right' : ''}>
                 <p className="text-sm text-muted-foreground">
-                  {isRTL ? 'معدل التحويل' : 'Conversion Rate'}
+                  {isRTL ? 'المصروفات' : 'Expenses'}
                 </p>
-                <p className="text-3xl font-bold">{conversionRate}%</p>
+                <p className="text-3xl font-bold">{analytics.totalExpenses.toLocaleString()} <span className="text-sm">EGP</span></p>
               </div>
               <div className="p-3 rounded-xl bg-purple-500/10">
-                <CheckCircle className="w-6 h-6 text-purple-500" />
+                <Wallet className="w-6 h-6 text-purple-500" />
               </div>
             </div>
             <div className={`mt-4 text-sm text-muted-foreground ${isRTL ? 'text-right' : ''}`}>
-              {isRTL ? 'من العملاء المحتملين للمشتركين' : 'Leads to subscribers'}
+              {isRTL ? 'صافي الربح:' : 'Net profit:'} {(analytics.totalRevenue - analytics.totalExpenses).toLocaleString()} EGP
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Orders Over Time */}
         <Card className="glass border-border">
           <CardHeader>
             <CardTitle className={isRTL ? 'text-right' : ''}>
-              {isRTL ? 'الطلبات خلال آخر 14 يوم' : 'Orders (Last 14 Days)'}
+              {range === '24h' && (isRTL ? 'الطلبات خلال آخر 24 ساعة' : 'Orders (Last 24 Hours)')}
+              {range === 'week' && (isRTL ? 'الطلبات خلال آخر 7 أيام' : 'Orders (Last 7 Days)')}
+              {range === 'month' && (isRTL ? 'الطلبات خلال آخر 30 يوم' : 'Orders (Last 30 Days)')}
+              {range === 'custom' && (isRTL ? `الطلبات من ${customFrom} إلى ${customTo}` : `Orders (${customFrom} to ${customTo})`)}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -320,7 +358,6 @@ const AnalyticsDashboard = () => {
           </CardContent>
         </Card>
 
-        {/* Subscription Status Breakdown */}
         <Card className="glass border-border">
           <CardHeader>
             <CardTitle className={isRTL ? 'text-right' : ''}>

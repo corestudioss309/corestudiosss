@@ -16,10 +16,11 @@ import CouponManager from './CouponManager';
 import SnapsManager from './SnapsManager';
 import ReviewsManager from './ReviewsManager';
 import PopupSettingsManager from './PopupSettingsManager';
+import ExpensesManager from './ExpensesManager';
 import logoAsset from '@/assets/core-studio-wordlogo-white.svg';
-import { MessageSquare, Megaphone } from 'lucide-react';
+import { MessageSquare, Megaphone, Wallet } from 'lucide-react';
 
-type Tab = 'analytics' | 'leads' | 'subscribers' | 'renewals' | 'pricing' | 'payment' | 'addons' | 'coupons' | 'snaps' | 'reviews' | 'popup';
+type Tab = 'analytics' | 'leads' | 'subscribers' | 'renewals' | 'pricing' | 'payment' | 'addons' | 'coupons' | 'snaps' | 'reviews' | 'popup' | 'expenses';
 
 const AdminDashboard = () => {
   const { t, isRTL } = useLanguage();
@@ -35,6 +36,7 @@ const AdminDashboard = () => {
     { id: 'analytics' as Tab, label: isRTL ? 'التحليلات' : 'Analytics', icon: BarChart3 },
     { id: 'subscribers' as Tab, label: isRTL ? 'المشتركين' : 'Subscribers', icon: ShoppingCart },
     { id: 'renewals' as Tab, label: isRTL ? 'التجديدات' : 'Renewals', icon: RefreshCw },
+    { id: 'expenses' as Tab, label: isRTL ? 'المصروفات' : 'Expenses', icon: Wallet },
     { id: 'leads' as Tab, label: t('admin.leads'), icon: Users },
     { id: 'pricing' as Tab, label: t('admin.pricing'), icon: DollarSign },
     { id: 'coupons' as Tab, label: isRTL ? 'الكوبونات' : 'Coupons', icon: Ticket },
@@ -137,6 +139,7 @@ const AdminDashboard = () => {
           {activeTab === 'analytics' && <AnalyticsDashboard />}
           {activeTab === 'subscribers' && <SubscribersTable />}
           {activeTab === 'renewals' && <RenewalsTable />}
+          {activeTab === 'expenses' && <ExpensesManager />}
           {activeTab === 'leads' && <LeadsTable />}
           {activeTab === 'pricing' && <PricingManager />}
           {activeTab === 'coupons' && <CouponManager />}
