@@ -58,8 +58,10 @@ const AnalyticsDashboard = () => {
     const orders = allOrders?.filter(o => inRange(o.created_at));
     const leads = allLeads?.filter(l => inRange(l.created_at));
     const renewals = allRenewals?.filter(r => inRange(r.created_at));
+    const fromDate = format(from, 'yyyy-MM-dd');
+    const toDate = format(to, 'yyyy-MM-dd');
     const totalExpenses = (allExpenses || [])
-      .filter(e => inRange(e.expense_date + 'T12:00:00'))
+      .filter(e => e.expense_date >= fromDate && e.expense_date <= toDate)
       .reduce((s, e) => s + (e.amount || 0), 0);
 
     if (orders && leads) {
