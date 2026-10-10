@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import RaysBackground from '@/components/RaysBackground';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { generateId } from '@/lib/ids';
+import { getPaidPrices } from '@/lib/pricing';
 import { supabase } from '@/integrations/supabase/client';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
@@ -75,9 +76,7 @@ const Subscribe = () => {
   const [addonSettings, setAddonSettings] = useState<AddonSettings | null>(null);
   const [pricing, setPricing] = useState<PricingData | null>(null);
 
-  const basePrice = pricing
-    ? (pricing.discount_enabled ? Math.round(pricing.setup_fee * (1 - pricing.discount_percent / 100)) : pricing.setup_fee)
-    : 0;
+  const { setupFee: basePrice, monthlyFee: paidMonthlyFee } = getPaidPrices(pricing);
 
   const addonTotal =
     (selectedAddons.customDomain && addonSettings?.custom_domain_enabled ? addonSettings.custom_domain_price : 0) +
@@ -127,7 +126,7 @@ const Subscribe = () => {
           whatsapp: formData.whatsapp.trim(),
           website_requirements: formData.websiteRequirements.trim(),
           setup_fee: basePrice,
-          monthly_fee: pricing?.monthly_fee || 0,
+          monthly_fee: paidMonthlyFee,
           custom_domain_addon: selectedAddons.customDomain,
           business_email_addon: selectedAddons.businessEmail,
           addon_total: addonTotal,

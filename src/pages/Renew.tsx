@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import RaysBackground from '@/components/RaysBackground';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { generateId } from '@/lib/ids';
+import { getPaidPrices } from '@/lib/pricing';
 import { supabase } from '@/integrations/supabase/client';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
@@ -61,9 +62,7 @@ const Renew = () => {
   const [paymentSettings, setPaymentSettings] = useState<PaymentSettings | null>(null);
   const [pricing, setPricing] = useState<PricingData | null>(null);
 
-  const basePrice = pricing
-    ? (pricing.discount_enabled ? Math.round(pricing.monthly_fee * (1 - pricing.discount_percent / 100)) : pricing.monthly_fee)
-    : 0;
+  const { monthlyFee: basePrice } = getPaidPrices(pricing);
 
   const discount = couponData?.discountAmount || 0;
   const totalAmount = basePrice - discount;
